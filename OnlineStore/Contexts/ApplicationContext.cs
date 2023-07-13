@@ -10,14 +10,13 @@ public class ApplicationContext
         ApplicationRole,
         int,
         ApplicationUserClaim,
-        ApplicationUserRole, 
-        ApplicationUserLogin, 
-        ApplicationRoleClaim, 
+        ApplicationUserRole,
+        ApplicationUserLogin,
+        ApplicationRoleClaim,
         ApplicationUserToken
     >
 {
-    public ApplicationContext(DbContextOptions options): base(options)
+    public ApplicationContext(DbContextOptions options) : base(options)
     {
     }
-
 }

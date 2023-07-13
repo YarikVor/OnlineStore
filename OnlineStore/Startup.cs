@@ -1,7 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-using OnlineStore.Contexts;
-using OnlineStore.Entities;
-
 namespace OnlineStore;
 
 public class Startup
@@ -38,17 +34,14 @@ public class Startup
             app.UseSwagger();
             app.UseSwaggerUI();
         }
-        
+
         app.UseHttpsRedirection();
-        
+
         //app.UseCors();
-        
-        
+
+
         app.UseRouting();
         app.UseAuthorization();
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapControllers();
-        });
+        app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
     }
 }

@@ -3,11 +3,11 @@ using Microsoft.EntityFrameworkCore.Design;
 
 namespace OnlineStore.Contexts.Factories;
 
-public abstract class AbstractDesignTimeDbContextFactory<TContext>: IDesignTimeDbContextFactory<TContext> where TContext : DbContext
+public abstract class AbstractDesignTimeDbContextFactory<TContext> : IDesignTimeDbContextFactory<TContext>
+    where TContext : DbContext
 {
-    protected readonly Type DbContextType = typeof(TContext);
-
     protected readonly IConfiguration Configuration;
+    protected readonly Type DbContextType = typeof(TContext);
 
     protected AbstractDesignTimeDbContextFactory()
     {
@@ -15,11 +15,11 @@ public abstract class AbstractDesignTimeDbContextFactory<TContext>: IDesignTimeD
         configurationManager.AddJsonFile("appsettings.json");
         Configuration = configurationManager;
     }
-    
+
     public virtual TContext CreateDbContext(string[] args)
     {
         var connectionString = Configuration.GetRequiredDefaultConnectionString();
-        
+
         var options = new DbContextOptionsBuilder<TContext>()
             .UseNpgsql(connectionString)
             .Options;

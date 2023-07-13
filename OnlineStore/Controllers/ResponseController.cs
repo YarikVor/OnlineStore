@@ -6,7 +6,7 @@ namespace OnlineStore.Controllers;
 
 [ApiController]
 [Route("api/v1/response")]
-public class ResponseController: Controller
+public class ResponseController : Controller
 {
     private readonly OnlineStoreContext _context;
 
@@ -18,7 +18,7 @@ public class ResponseController: Controller
     [HttpPost]
     public async Task<IActionResult> CreateDelivery()
     {
-        var delivery = new DeliveryMethod()
+        var delivery = new DeliveryMethod
         {
             Name = Random.Shared.Next().ToString()
         };

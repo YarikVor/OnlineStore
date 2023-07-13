@@ -22,16 +22,20 @@ public static class ServiseExtension
     }
 
     public static IServiceCollection AddContexts(this IServiceCollection services, IConfiguration configuration)
-        => AddContexts(services, configuration.GetRequiredDefaultConnectionString());
-    
+    {
+        return AddContexts(services, configuration.GetRequiredDefaultConnectionString());
+    }
+
     public static IServiceCollection AddContexts(this IServiceCollection services, string connectionString)
     {
         return services
             .AddDbContext<ApplicationContext>(Connect)
             .AddDbContext<OnlineStoreContext>(Connect);
 
-        void Connect(DbContextOptionsBuilder builder) 
-            => builder.UseNpgsql(connectionString);
+        void Connect(DbContextOptionsBuilder builder)
+        {
+            builder.UseNpgsql(connectionString);
+        }
     }
 
     public static IServiceCollection AddApplicationIdentity(this IServiceCollection services)
@@ -40,8 +44,7 @@ public static class ServiseExtension
             .AddIdentity<ApplicationUser, ApplicationRole>()
             .AddEntityFrameworkStores<ApplicationContext>()
             .AddDefaultTokenProviders();
-        
-        
+
 
         return services;
     }
@@ -68,7 +71,5 @@ public static class ServiseExtension
                 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
             options.User.RequireUniqueEmail = true;
         });
-
     }
-
 }

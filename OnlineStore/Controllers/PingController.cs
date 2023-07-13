@@ -4,8 +4,11 @@ namespace OnlineStore.Controllers;
 
 [ApiController]
 [Route("api/v1/ping")]
-public class PingController: Controller
+public class PingController : Controller
 {
     [HttpGet]
-    public OkResult Ping() => Ok();
+    public OkResult Ping()
+    {
+        return Ok();
+    }
 }

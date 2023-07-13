@@ -1,5 +1,5 @@
 namespace OnlineStore.Contexts.Factories;
 
-public class OnlineStoreContextFactory: AbstractDesignTimeDbContextFactory<OnlineStoreContext>
+public class OnlineStoreContextFactory : AbstractDesignTimeDbContextFactory<OnlineStoreContext>
 {
 }
