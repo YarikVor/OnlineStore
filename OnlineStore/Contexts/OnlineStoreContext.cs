@@ -6,9 +6,9 @@ namespace OnlineStore.Contexts;
 
 public class OnlineStoreContext : DbContext
 {
-    public OnlineStoreContext(DbContextOptions options) : base(options)
+    public OnlineStoreContext(DbContextOptions<OnlineStoreContext> options) : base(options)
     {
-        Database.EnsureCreated();
+
     }
 
     public DbSet<Blog> Blog { get; set; } = null!;
