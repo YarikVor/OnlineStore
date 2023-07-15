@@ -25,6 +25,9 @@ public class Startup
             .AddContexts(_configuration)
             .AddApplicationIdentity()
             .AddConfigurationIdentity();
+
+        services
+            .AddOnlineStoreAutoMapper();
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

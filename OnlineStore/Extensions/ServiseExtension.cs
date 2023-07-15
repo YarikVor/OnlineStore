@@ -1,7 +1,10 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OnlineStore.Contexts;
 using OnlineStore.Entities;
+using OnlineStore.Mappers;
+using IConfigurationProvider = AutoMapper.IConfigurationProvider;
 
 namespace OnlineStore;
 
@@ -71,5 +74,12 @@ public static class ServiseExtension
                 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
             options.User.RequireUniqueEmail = true;
         });
+    }
+    
+    public static IServiceCollection AddOnlineStoreAutoMapper(this IServiceCollection services)
+    {
+        return services
+            .AddScoped<IConfigurationProvider, OnlineShopMapperConfiguration>()
+            .AddScoped<IMapper>(s => s.GetRequiredService<IConfigurationProvider>().CreateMapper());
     }
 }
