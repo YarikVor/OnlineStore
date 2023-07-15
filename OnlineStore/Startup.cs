@@ -1,3 +1,6 @@
+using AutoMapper;
+using OnlineStore.Mappers;
+
 namespace OnlineStore;
 
 public class Startup
@@ -22,6 +25,7 @@ public class Startup
             .AddCors();
 
         services
+            .AddEntityFrameworkNpgsql()
             .AddContexts(_configuration)
             .AddApplicationIdentity()
             .AddConfigurationIdentity();
