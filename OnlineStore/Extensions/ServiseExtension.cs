@@ -23,7 +23,8 @@ public static class ServiseExtension
                 {
                     policy.WithOrigins("*")
                         .AllowAnyHeader()
-                        .AllowAnyMethod();
+                        .AllowAnyMethod()
+                        .AllowAnyOrigin();
                 });
         });
     }

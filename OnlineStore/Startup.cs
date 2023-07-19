@@ -48,7 +48,9 @@ public class Startup
 
         app.UseHttpsRedirection();
 
-        //app.UseCors();
+
+        
+        app.UseCors();
 
 
         app.UseRouting();
@@ -57,5 +59,7 @@ public class Startup
         app.UseAuthorization();
         
         app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+
+        app.UseCertificateForwarding();
     }
 }
