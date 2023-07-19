@@ -25,10 +25,10 @@ public class Startup
             .AddCors();
 
         services
-            .AddEntityFrameworkNpgsql()
-            .AddContexts(_configuration)
+            //.AddEntityFrameworkNpgsql()
             .AddApplicationIdentity()
-            .AddConfigurationIdentity();
+            .AddConfigurationIdentity()
+            .AddContexts(_configuration);
 
         services
             .AddOnlineStoreAutoMapper();
