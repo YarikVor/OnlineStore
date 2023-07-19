@@ -14,40 +14,41 @@ public class BlogController : Controller
 {
     private readonly IConfigurationProvider _provider;
     private readonly OnlineStoreContext _context;
-    
+
     public BlogController(IConfigurationProvider provider, OnlineStoreContext context)
     {
         _provider = provider;
         _context = context;
     }
 
-    [HttpPost]
-    public async Task<IActionResult> CreateBlog()
+    [HttpGet("block-list")]
+    public async Task<IActionResult> GetBlockList(int start = 0, int count = 5)
     {
-        var blog = new Blog()
-        {
-            Title = "Test",
-            UserId = 2,
-            Description = "Desc",
-            PhotoUri = "http:\\\\333.com",
-            TimeWriting = DateTimeOffset.Now
-        };
+        int countSkip = count * start;
 
-        await _context.AddAsync(blog);
-
-        await _context.SaveChangesAsync();
-
-        return Json(blog);
-    }
-
-    [HttpGet("list/block")]
-    public async Task<IActionResult> GetBlockList(int count = 5)
-    {
-        var result = await _context.Blog
+        var result = await _context
+            .Blogs
+            .AsNoTracking()
+            .Skip(countSkip)
+            .Take(count)
             .ProjectTo<BlogBlockDto>(_provider)
             .ToListAsync();
 
         return Json(result);
-
     }
+
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetBlog(int id)
+    {
+        var blog = _context.Blogs
+            .AsNoTracking()
+            .Where(b => b.Id == id)
+            .ProjectTo<BlogInfoDto>(_provider)
+            .FirstOrDefault();
+
+        return blog == null
+            ? NotFound()
+            : Json(blog);
+    }
+
 }

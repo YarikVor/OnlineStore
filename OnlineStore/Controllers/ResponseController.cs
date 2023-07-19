@@ -35,7 +35,7 @@ public class DeliveryMethodController : Controller
     [HttpGet("list")]
     public async Task<IActionResult> GetListDeliveryAsync()
     {
-        var resultList = await _context.DeliveryMethod
+        var resultList = await _context.DeliveryMethods
             .Select(e => e.Name)
             .ToListAsync();
 
