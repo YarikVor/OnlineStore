@@ -1,6 +1,10 @@
+using System.Reflection;
 using AutoMapper;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using OnlineStore.Contexts;
 using OnlineStore.Entities;
 using OnlineStore.Mappers;
@@ -74,6 +78,32 @@ public static class ServiseExtension
                 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
             options.User.RequireUniqueEmail = true;
         });
+    }
+
+    public static IServiceCollection AddJwtAuthentication(this IServiceCollection services)
+    {
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.RequireHttpsMetadata = false;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = AuthOptions.ISSUER,
+                    ValidateAudience = true,
+                    ValidAudience = AuthOptions.Client,
+                    ValidateLifetime = true,
+                    IssuerSigningKey = AuthOptions.GetSymmetricSecurityKey(),
+                    ValidateIssuerSigningKey = true,
+                };
+            });
+
+        return services;
+    }
+ 
+    public static IServiceCollection AddTokenGenerator(this IServiceCollection services)
+    {
+        return services.AddSingleton<ITokenGenerator, JwtTokenGenerator>();
     }
     
     public static IServiceCollection AddOnlineStoreAutoMapper(this IServiceCollection services)

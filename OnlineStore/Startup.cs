@@ -32,6 +32,10 @@ public class Startup
 
         services
             .AddOnlineStoreAutoMapper();
+
+        services
+            .AddJwtAuthentication()
+            .AddTokenGenerator();
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -48,7 +52,10 @@ public class Startup
 
 
         app.UseRouting();
+        
+        app.UseAuthentication();
         app.UseAuthorization();
+        
         app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
     }
 }
