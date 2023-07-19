@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using AutoMapper;
 
@@ -7,11 +8,12 @@ public class OnlineShopMapperConfigurationExpression : MapperConfigurationExpres
 {
     public OnlineShopMapperConfigurationExpression()
     {
-        var profiles = new Profile[]
-        {
-            new CategoryProfile()
-        };
-        
+        var profiles = Assembly.GetExecutingAssembly().GetTypes()
+            .Where(t =>
+                t.IsSubclassOf(typeof(Profile))
+                && !t.IsSubclassOf(typeof(MapperConfigurationExpression)))
+            .Select(t => (Profile)Activator.CreateInstance(t)!);
+
         AddProfiles(profiles);
     }
 }
