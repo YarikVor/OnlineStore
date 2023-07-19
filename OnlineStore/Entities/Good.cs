@@ -22,5 +22,5 @@ public class Good
     public string Description { get; set; }
 
     public ICollection<SubGood> SubGoods { get; set; }
-    public ICollection<Response> Responses { get; set; }
+    public ICollection<Review> Reviews { get; set; }
 }

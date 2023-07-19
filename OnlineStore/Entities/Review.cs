@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace OnlineStore.Entities;
 
-public class Response
+public class Review
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
