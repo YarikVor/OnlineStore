@@ -19,7 +19,7 @@ public class Startup
 
         services
             .AddEndpointsApiExplorer()
-            .AddSwaggerGen();
+            .AddSwaggerGenWithScheme();
 
         services
             .AddCors();
