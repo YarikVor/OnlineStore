@@ -9,7 +9,10 @@ public class Category
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int Id { get; set; }
 
-    public int ParentId { get; set; }
+    [ForeignKey(nameof(Parent))]
+    public int? ParentId { get; set; } = null;
+    
+    public virtual Category? Parent { get; set; }
 
     [MaxLength(50)]
     public string Name { get; set; }
@@ -22,4 +25,7 @@ public class Category
 
     [MaxLength(500)]
     public string Description { get; set; }
+
+    [ForeignKey(nameof(ParentId))]
+    public virtual ICollection<Category> Children { get; set; }
 }
