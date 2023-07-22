@@ -1,4 +1,5 @@
 using AutoMapper;
+using OnlineStore.Controllers;
 using OnlineStore.Dtos;
 using OnlineStore.Entities;
 
@@ -8,6 +9,10 @@ public class CategoryProfile : Profile
 {
     public CategoryProfile()
     {
-        CreateProjection<Blog, BlogBlockDto>();
+        CreateProjection<Category, CategoryInfoDto>();
+        CreateProjection<Category, CategoryLinearDto>();
+        CreateProjection<Category, CategoryBlockDto>();
+        CreateProjection<Category, CategoryHierarchyDto>();
+
     }
 }
