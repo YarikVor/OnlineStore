@@ -1,10 +1,11 @@
 using System.Security.Claims;
 using AutoMapper;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using OnlineStore.Authentications.Facebook;
 using OnlineStore.Entities;
 
 namespace OnlineStore.Controllers;
@@ -14,22 +15,20 @@ namespace OnlineStore.Controllers;
 public class UserSignController : Controller
 {
     private readonly IMapper _mapper;
-    private readonly RoleManager<ApplicationRole> _roleManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly ITokenGenerator _tokenGenerator;
     private readonly UserManager<ApplicationUser> _userManager;
 
     public UserSignController(UserManager<ApplicationUser> userManager, IMapper mapper,
-        SignInManager<ApplicationUser> signInManager, ITokenGenerator tokenGenerator,
-        RoleManager<ApplicationRole> roleManager)
+        SignInManager<ApplicationUser> signInManager, ITokenGenerator tokenGenerator)
     {
         _userManager = userManager;
         _mapper = mapper;
         _signInManager = signInManager;
         _tokenGenerator = tokenGenerator;
-        _roleManager = roleManager;
     }
 
+    #region Authorization
 
     /// <summary>
     ///     Registration a user
@@ -41,37 +40,14 @@ public class UserSignController : Controller
     [HttpPost]
     public async Task<IActionResult> Registration(RegistrationDto dto)
     {
-        var user = _mapper.Map<ApplicationUser>(dto);
-        user.UserName = $"user{Guid.NewGuid():N}";
+        var user = await CreateUser(dto);
 
-        var userCreateResult = await _userManager.CreateAsync(user, dto.Password);
+        if (user == null)
+            return ValidationProblem();
 
-        if (!userCreateResult.Succeeded)
-        {
-            AddErrorsInModelState(userCreateResult);
-            return ValidationProblem(ModelState);
-        }
+        var userTokenDto = GenerateUserTokenDto(user);
 
-        var roleAddResult = await _userManager.AddToRoleAsync(user, ApplicationRole.User);
-
-        if (!roleAddResult.Succeeded)
-        {
-            AddErrorsInModelState(userCreateResult);
-            return ValidationProblem(ModelState);
-        }
-
-        var token = GetToken(user, ApplicationRole.User);
-        var userResult = _mapper.Map<UserFullInfoDto>(user);
-        userResult.Role = ApplicationRole.User;
-
-        var response = new UserTokenDto
-        {
-            User = userResult,
-            AccessToken = token.Access,
-            RefreshToken = token.Refresh
-        };
-
-        return Json(response);
+        return Json(userTokenDto);
     }
 
     /// <summary>
@@ -85,39 +61,41 @@ public class UserSignController : Controller
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginDto dto)
     {
-        var user = await _userManager.Users
-            .FirstOrDefaultAsync(u => u.Email == dto.Email);
+        var user = await FindUser(dto);
+
+        if (user == null)
+            return ValidationProblem();
+
+        var roleName = (await _userManager.GetRolesAsync(user)).FirstOrDefault();
+
+        if (roleName == null)
+            return NotFound("User doesn't have roles");
+
+        var userTokenDto = GenerateUserTokenDto(user, roleName);
+
+        return Json(userTokenDto);
+    }
+
+    private async Task<ApplicationUser?> FindUser(LoginDto dto)
+    {
+        var user = await _userManager.FindByEmailAsync(dto.Email);
 
         if (user == null)
         {
             ModelState.AddModelError("userNotFound", "User is not avaible");
-            return NotFound(ModelState);
+            return null;
         }
 
-        var signInResult = await _signInManager.PasswordSignInAsync(user, dto.Password, false, false);
+        var signInResult =
+            await _signInManager.PasswordSignInAsync(user, dto.Password, false, false);
 
         if (!signInResult.Succeeded)
         {
             ModelState.AddModelError("passwordIsNotValid", "Password is not valid");
-            return ValidationProblem(ModelState);
+            return null;
         }
 
-        var roleName = (await _userManager.GetRolesAsync(user)).FirstOrDefault();
-
-        if (roleName == null) return NotFound("User doesn't have roles");
-
-        var userDto = _mapper.Map<UserFullInfoDto>(user);
-        userDto.Role = roleName;
-
-        var token = GetToken(userDto);
-        var result = new UserTokenDto
-        {
-            User = userDto,
-            AccessToken = token.Access,
-            RefreshToken = token.Refresh
-        };
-
-        return Json(result);
+        return user;
     }
 
     /// <summary>
@@ -142,18 +120,11 @@ public class UserSignController : Controller
         if (role == null)
             return NotFound();
 
-        var token = GetAccessToken(user.Id, role);
-        var userDto = _mapper.Map<UserFullInfoDto>(user);
-        userDto.Role = role;
-
-        var result = new UserAccessTokenDto
-        {
-            AccessToken = token,
-            User = userDto
-        };
+        var result = GeneratyUserAccessTokenDto(user, role);
 
         return Json(result);
     }
+
 
     [HttpPost("password/send-recovery")]
     public async Task<IActionResult> RecoveryPassword(string email)
@@ -172,8 +143,7 @@ public class UserSignController : Controller
     [HttpPost("password/reset")]
     public async Task<IActionResult> ResetPassword(RecoveryDto dto)
     {
-        var user = await _userManager.Users
-            .FirstOrDefaultAsync(u => u.Email == dto.Email);
+        var user = await _userManager.FindByEmailAsync(dto.Email);
 
         if (user == null)
         {
@@ -193,16 +163,7 @@ public class UserSignController : Controller
 
         if (roleName == null) return NotFound("User doesn't have roles");
 
-        var userDto = _mapper.Map<UserFullInfoDto>(user);
-        userDto.Role = roleName;
-
-        var token = GetToken(userDto);
-        var result = new UserTokenDto
-        {
-            User = userDto,
-            AccessToken = token.Access,
-            RefreshToken = token.Refresh
-        };
+        var result = GenerateUserTokenDto(user, roleName);
 
         return Json(result);
     }
@@ -226,13 +187,7 @@ public class UserSignController : Controller
         return Ok();
     }
 
-    private string GetAccessToken(int id, string role)
-    {
-        var claims = new Claim[]
-        {
-            new(ClaimTypes.NameIdentifier, id.ToString()),
-            new(ClaimTypes.Role, role)
-        };
+    #endregion
 
         var access = _tokenGenerator.GenerateToken(claims, TokenType.Access);
 
@@ -259,10 +214,151 @@ public class UserSignController : Controller
 
     private (string Access, string Refresh) GetToken(ApplicationUser user, string role)
     {
-        return GetToken(user.Id, role);
+        var email = User.FindFirstValue(ClaimTypes.Email);
+        //TODO: change not found email
+        if (string.IsNullOrEmpty(email))
+            return Unauthorized("email is empty");
+
+        var user = await _userManager.FindByEmailAsync(email);
+        string roleName;
+
+        if (user == null)
+        {
+            var registrationDto = new RegistrationDto
+            {
+                Email = email,
+                FirstName = User.FindFirstValue(ClaimTypes.GivenName),
+                LastName = User.FindFirstValue(ClaimTypes.Surname)
+            };
+
+            user = await CreateUser(registrationDto);
+            if (user == null)
+                return ValidationProblem();
+
+            roleName = ApplicationRole.User;
+        }
+        else
+        {
+            roleName = (await _userManager.GetRolesAsync(user)).FirstOrDefault();
+            if (roleName == null)
+                return NotFound("User doesn't have roles");
+        }
+
+        var result = GenerateUserTokenDto(user, roleName);
+        return Json(result);
     }
 
-    private (string Access, string Refresh) GetToken(int id, string role)
+    #endregion
+    
+    #region Another methods
+
+    /// <summary>
+    ///     Generates a UserAccessTokenDto containing user information and access token based on the provided ApplicationUser
+    ///     and role.
+    /// </summary>
+    /// <param name="user">The ApplicationUser object representing the user for which the access token is generated.</param>
+    /// <param name="role">The role to be assigned to the user.</param>
+    /// <returns>A UserAccessTokenDto containing user information and access token.</returns>
+    private UserAccessTokenDto GeneratyUserAccessTokenDto(ApplicationUser user, string role)
+    {
+        var token = GetAccessToken(user.Id, role);
+        var userDto = _mapper.Map<UserFullInfoDto>(user);
+        userDto.Role = role;
+
+        var result = new UserAccessTokenDto
+        {
+            AccessToken = token,
+            User = userDto
+        };
+        return result;
+    }
+
+    /// <summary>
+    ///     Generates a UserTokenDto containing user information, access token, and refresh token based on the provided
+    ///     ApplicationUser and role.
+    /// </summary>
+    /// <param name="user">The ApplicationUser object representing the user for which the tokens are generated.</param>
+    /// <param name="role">
+    ///     The role to be assigned to the user. Defaults to <see cref="ApplicationRole.User" /> if not
+    ///     provided.
+    /// </param>
+    private UserTokenDto GenerateUserTokenDto(ApplicationUser user, string role = ApplicationRole.User)
+    {
+        var token = GetAccessAndRefreshToken(user, role);
+        var userResult = _mapper.Map<UserFullInfoDto>(user);
+        userResult.Role = role;
+
+        var response = new UserTokenDto
+        {
+            User = userResult,
+            AccessToken = token.Access,
+            RefreshToken = token.Refresh
+        };
+        return response;
+    }
+
+    /// <summary>
+    ///     Creates a new user based on the data from the <paramref name="dto" /> object and assigns the '
+    ///     <see cref="ApplicationRole.User" />' role to the user.
+    /// </summary>
+    /// <param name="dto">Data for registering a new user. The Password field can be empty or null.</param>
+    /// <returns>
+    ///     An <see cref="ApplicationUser" /> object representing the created user or null if the creation was unsuccessful.
+    /// </returns>
+    private async Task<ApplicationUser?> CreateUser(RegistrationDto dto)
+    {
+        var user = _mapper.Map<ApplicationUser>(dto);
+        user.UserName = $"user{Guid.NewGuid():N}";
+
+        var userCreateResult = string.IsNullOrEmpty(dto.Password)
+            ? await _userManager.CreateAsync(user)
+            : await _userManager.CreateAsync(user, dto.Password);
+
+        if (!userCreateResult.Succeeded)
+        {
+            AddErrorsInModelState(userCreateResult);
+            return null;
+        }
+
+        var roleAddResult = await _userManager.AddToRoleAsync(user, ApplicationRole.User);
+
+        if (!roleAddResult.Succeeded)
+        {
+            AddErrorsInModelState(userCreateResult);
+            return null;
+        }
+
+        return user;
+    }
+
+    private string GetToken(int id, string role, TokenType tokenType)
+    {
+        var claims = new Claim[]
+        {
+            new(ClaimTypes.NameIdentifier, id.ToString()),
+            new(ClaimTypes.Role, role)
+        };
+
+        var token = _tokenGenerator.GenerateToken(claims, TokenType.Access);
+        return token;
+    }
+
+    private string GetAccessToken(int id, string role)
+    {
+        return GetToken(id, role, TokenType.Access);
+    }
+
+    private string GetRefreshToken(int id)
+    {
+        return GetToken(id, "refresh", TokenType.Refresh);
+    }
+
+    private (string Access, string Refresh) GetAccessAndRefreshToken(ApplicationUser user, string role)
+    {
+        return GetAccessAndRefreshToken(user.Id, role);
+    }
+
+    private (string Access, string Refresh) GetAccessAndRefreshToken(int id, string role)
     {
         var access = GetAccessToken(id, role);
         var refresh = GetRefreshToken(id);
@@ -280,4 +376,6 @@ public class UserSignController : Controller
     {
         foreach (var error in errors) ModelState.AddModelError(error.Code, error.Description);
     }
+
+    #endregion
 }
