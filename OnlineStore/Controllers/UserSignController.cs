@@ -189,30 +189,32 @@ public class UserSignController : Controller
 
     #endregion
 
-        var access = _tokenGenerator.GenerateToken(claims, TokenType.Access);
+    #region External Authorization
 
-        return access;
-    }
-
-    private string GetRefreshToken(int id)
+    [HttpGet("login/facebook")]
+    public IActionResult FacebookLogin()
     {
-        var claims = new Claim[]
-        {
-            new(ClaimTypes.NameIdentifier, id.ToString()),
-            new(ClaimTypes.Role, "refresh")
-        };
-
-        var access = _tokenGenerator.GenerateToken(claims, TokenType.Refresh);
-
-        return access;
+        return Login("Facebook");
     }
 
-    private (string Access, string Refresh) GetToken(UserFullInfoDto user)
+    [Obsolete("Not implemented")]
+    [HttpGet("login/google")]
+    public IActionResult GoogleLogin()
     {
-        return GetToken(user.Id, user.Role);
+        throw new NotImplementedException();
+        return Login("Google");
     }
 
-    private (string Access, string Refresh) GetToken(ApplicationUser user, string role)
+    private IActionResult Login(string scheme)
+    {
+        return Challenge(
+            new AuthenticationProperties { RedirectUri = Url.Action(nameof(Callback)) },
+            scheme);
+    }
+
+    [HttpGet("login/callback")]
+    [Authorize(AuthenticationSchemes = FacebookConstants.AuthenticationScheme)]
+    public async Task<IActionResult> Callback()
     {
         var email = User.FindFirstValue(ClaimTypes.Email);
         //TODO: change not found email

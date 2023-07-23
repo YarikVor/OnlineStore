@@ -34,8 +34,9 @@ public class Startup
             .AddOnlineStoreAutoMapper();
 
         services
+            .AddTokenGenerator()
             .AddJwtAuthentication()
-            .AddTokenGenerator();
+            .AddFacebookAppToken(_configuration);
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

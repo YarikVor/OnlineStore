@@ -1,10 +1,13 @@
 using System.Reflection;
 using AutoMapper;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Facebook;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using OnlineStore.Authentications.Facebook;
 using OnlineStore.Contexts;
 using OnlineStore.Entities;
 using OnlineStore.Mappers;
@@ -77,9 +80,9 @@ public static class ServiseExtension
         });
     }
 
-    public static IServiceCollection AddJwtAuthentication(this IServiceCollection services)
+    public static AuthenticationBuilder AddJwtAuthentication(this IServiceCollection services)
     {
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        return services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
                 options.RequireHttpsMetadata = false;
@@ -94,22 +97,49 @@ public static class ServiseExtension
                     ValidateIssuerSigningKey = true,
                 };
             });
-
-        return services;
     }
- 
+
+    public static AuthenticationBuilder AddFacebookAppToken(this AuthenticationBuilder builder,
+        IConfiguration configuration)
+    {
+        var section = configuration.GetSection("Authentication:Facebook");
+
+        var appId = section["AppId"];
+        var appSecret = section["AppSecret"];
+        
+        return builder.AddFacebookAppToken(appId, appSecret);
+    }
+
+    public static AuthenticationBuilder AddFacebookAppToken(this AuthenticationBuilder builder, string appId,
+        string appSecret)
+    {
+        
+        return builder.AddFacebook(opt =>
+        {
+            opt.AppId = appId;
+            opt.AppSecret = appSecret;
+            
+            opt.AuthorizationEndpoint = FacebookConstants.AuthorizationEndpoint;
+            opt.TokenEndpoint = FacebookConstants.TokenEndpoint;
+            opt.UserInformationEndpoint = FacebookConstants.UserInformationEndpoint;
+            
+            opt.CallbackPath = PathString.FromUriComponent("/api/v1/user/login/extern");
+            
+        });
+    }
+
     public static IServiceCollection AddTokenGenerator(this IServiceCollection services)
     {
         return services.AddSingleton<ITokenGenerator, JwtTokenGenerator>();
     }
-    
+
     public static IServiceCollection AddOnlineStoreAutoMapper(this IServiceCollection services)
     {
         return services
             .AddScoped<IConfigurationProvider, OnlineShopMapperConfiguration>()
             .AddScoped<IMapper>(s => s.GetRequiredService<IConfigurationProvider>().CreateMapper());
     }
-    
+
     public static IServiceCollection AddSwaggerGenWithScheme(this IServiceCollection services)
     {
         return services.AddSwaggerGen(c =>
@@ -139,7 +169,6 @@ public static class ServiseExtension
                         Scheme = "oauth2",
                         Name = "Bearer",
                         In = ParameterLocation.Header,
-
                     },
                     new List<string>()
                 }
