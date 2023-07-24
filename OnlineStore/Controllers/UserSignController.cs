@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using AutoMapper;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -196,12 +197,10 @@ public class UserSignController : Controller
     {
         return Login("Facebook");
     }
-
-    [Obsolete("Not implemented")]
+    
     [HttpGet("login/google")]
     public IActionResult GoogleLogin()
     {
-        throw new NotImplementedException();
         return Login("Google");
     }
 
@@ -213,7 +212,9 @@ public class UserSignController : Controller
     }
 
     [HttpGet("login/callback")]
-    [Authorize(AuthenticationSchemes = FacebookConstants.AuthenticationScheme)]
+    [Authorize(AuthenticationSchemes = 
+        $"{FacebookConstants.AuthenticationScheme},{GoogleDefaults.AuthenticationScheme}"
+    )]
     public async Task<IActionResult> Callback()
     {
         var email = User.FindFirstValue(ClaimTypes.Email);
@@ -230,6 +231,7 @@ public class UserSignController : Controller
             {
                 Email = email,
                 FirstName = User.FindFirstValue(ClaimTypes.GivenName),
+                //BUG: Maybe null from Google
                 LastName = User.FindFirstValue(ClaimTypes.Surname)
             };
 
@@ -241,7 +243,7 @@ public class UserSignController : Controller
         }
         else
         {
-            roleName = (await _userManager.GetRolesAsync(user)).FirstOrDefault();
+            roleName = (await _userManager.GetRolesAsync(user))!.FirstOrDefault();
             if (roleName == null)
                 return NotFound("User doesn't have roles");
         }

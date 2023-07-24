@@ -36,7 +36,8 @@ public class Startup
         services
             .AddTokenGenerator()
             .AddJwtAuthentication()
-            .AddFacebookAppToken(_configuration);
+            .AddFacebookAppToken(_configuration)
+            .AddGoogleAppToken(_configuration);
     }
 
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

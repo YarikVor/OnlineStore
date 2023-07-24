@@ -1,7 +1,6 @@
 using System.Reflection;
 using AutoMapper;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Facebook;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -94,7 +93,7 @@ public static class ServiseExtension
                     ValidAudience = AuthOptions.Client,
                     ValidateLifetime = true,
                     IssuerSigningKey = AuthOptions.GetSymmetricSecurityKey(),
-                    ValidateIssuerSigningKey = true,
+                    ValidateIssuerSigningKey = true
                 };
             });
     }
@@ -106,25 +105,46 @@ public static class ServiseExtension
 
         var appId = section["AppId"];
         var appSecret = section["AppSecret"];
-        
+
         return builder.AddFacebookAppToken(appId, appSecret);
     }
 
     public static AuthenticationBuilder AddFacebookAppToken(this AuthenticationBuilder builder, string appId,
         string appSecret)
     {
-        
         return builder.AddFacebook(opt =>
         {
             opt.AppId = appId;
             opt.AppSecret = appSecret;
-            
+
             opt.AuthorizationEndpoint = FacebookConstants.AuthorizationEndpoint;
             opt.TokenEndpoint = FacebookConstants.TokenEndpoint;
             opt.UserInformationEndpoint = FacebookConstants.UserInformationEndpoint;
-            
+
             opt.CallbackPath = PathString.FromUriComponent("/api/v1/user/login/extern");
-            
+        });
+    }
+
+    public static AuthenticationBuilder AddGoogleAppToken(this AuthenticationBuilder builder,
+        IConfiguration configuration)
+    {
+        var section = configuration.GetSection("Authentication:Google");
+
+        var appId = section["ClientId"];
+        var appSecret = section["ClientSecret"];
+
+        return builder.AddGoogleAppToken(appId, appSecret);
+    }
+
+    public static AuthenticationBuilder AddGoogleAppToken(this AuthenticationBuilder builder, string clientId,
+        string clientSecret)
+    {
+        return builder.AddGoogle(opt =>
+        {
+            opt.ClientId = clientId;
+            opt.ClientSecret = clientSecret;
+
+            opt.CallbackPath = PathString.FromUriComponent(OnlineStoreConstants.GoogleCallback);
         });
     }
 
@@ -144,7 +164,7 @@ public static class ServiseExtension
     {
         return services.AddSwaggerGen(c =>
         {
-            c.SwaggerDoc("v1", new OpenApiInfo() { Title = "You api title", Version = "v1" });
+            c.SwaggerDoc("v1", new OpenApiInfo { Title = "OnlineStore", Version = "v1" });
             c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
                 Description = @"JWT Authorization header using the Bearer scheme. \r\n\r\n 
@@ -156,7 +176,7 @@ public static class ServiseExtension
                 Scheme = JwtBearerDefaults.AuthenticationScheme
             });
 
-            c.AddSecurityRequirement(new OpenApiSecurityRequirement()
+            c.AddSecurityRequirement(new OpenApiSecurityRequirement
             {
                 {
                     new OpenApiSecurityScheme
@@ -168,7 +188,7 @@ public static class ServiseExtension
                         },
                         Scheme = "oauth2",
                         Name = "Bearer",
-                        In = ParameterLocation.Header,
+                        In = ParameterLocation.Header
                     },
                     new List<string>()
                 }
